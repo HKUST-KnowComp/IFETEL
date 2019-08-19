@@ -13,6 +13,11 @@ else:
     DATA_DIR = '/home/hldai/data/fet'
     EL_DATA_DIR = '/home/hldai/data/el'
 
+TOKEN_UNK = '<UNK>'
+TOKEN_ZERO_PAD = '<ZPAD>'
+TOKEN_EMPTY_PAD = '<EPAD>'
+TOKEN_MENTION = '<MEN>'
+
 RANDOM_SEED = 771
 NP_RANDOM_SEED = 7711
 PY_RANDOM_SEED = 9973

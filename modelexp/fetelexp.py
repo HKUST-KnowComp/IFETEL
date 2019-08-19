@@ -1,8 +1,11 @@
 import logging
+import traceback
 import torch.multiprocessing as mp
 from utils import datautils
+from typing import List
 from modelexp import exputils
 from models.fetentvecutils import ELDirectEntityVec
+from modelexp.exputils import ModelSample, anchor_samples_to_model_samples, model_samples_from_json
 from models.feteldeep import FETELStack
 
 
@@ -82,3 +85,127 @@ def data_producer(data_queue: mp.Queue, response_queue: mp.Queue, mpevent, el_en
     print('producer waiting to exit ...')
     mpevent.wait()
     print('done waiting. exit.')
+
+
+def __get_entity_vecs_for_samples(el_entityvec: ELDirectEntityVec, samples: List[ModelSample], noel_pred_results,
+                                  filter_by_pop=False):
+    # return [el_firstsent.get_entity_vec(s.mention_str) for s in samples]
+    mstrs = [s.mention_str for s in samples]
+    prev_pred_labels = None
+    if noel_pred_results is not None:
+        prev_pred_labels = [noel_pred_results[s.mention_id] for s in samples]
+    return el_entityvec.get_entity_vecs(mstrs, prev_pred_labels, filter_by_pop)
+
+
+def train_proc(gres: exputils.GlobalRes, model, el_entityvec: ELDirectEntityVec, data_queue, response_queue,
+               dev_samples: List[ModelSample], test_mentions_file, test_sents_file, test_noel_preds_file, nil_rate,
+               learning_rate, n_iter, rand_per, per_penalty, single_type_path,
+               save_model_file=None, eval_batch_size=32, filter_by_pop=False, results_file=None):
+    lr_gamma = 0.7
+    logging.info('{}'.format(model.__class__.__name__))
+    dev_true_labels_dict = {s.mention_id: [gres.type_vocab[l] for l in s.labels] for s in dev_samples}
+    dev_entity_vecs, dev_el_sgns, dev_el_probs = __get_entity_vecs_for_samples(
+        el_entityvec, dev_samples, None, filter_by_pop)
+
+    test_samples = model_samples_from_json(gres.token_id_dict, gres.unknown_token_id, gres.mention_token_id,
+                                           gres.type_id_dict, test_mentions_file, test_sents_file)
+    test_noel_pred_results = datautils.read_pred_results_file(test_noel_preds_file)
+    mentions = datautils.read_json_objs(test_mentions_file)
+    test_true_labels_dict = {s.mention_id: [gres.type_vocab[l] for l in s.labels] for s in test_samples}
+    test_entity_vecs, test_el_sgns, test_el_probs = __get_entity_vecs_for_mentions(
+        el_entityvec, mentions, test_noel_pred_results, gres.n_types, filter_by_pop)
+    # test_entity_vecs, test_el_sgns, test_el_probs = __get_entity_vecs_for_samples(
+    #     el_entityvec, test_samples, test_noel_pred_results)
+    person_type_id = gres.type_id_dict.get('/person')
+    l2_person_type_ids = None
+    person_loss_vec = None
+    if person_type_id is not None:
+        l2_person_type_ids = __get_l2_person_type_ids(gres.type_vocab)
+        person_loss_vec = np.ones(gres.n_types, np.float32)
+        for tid in l2_person_type_ids:
+            person_loss_vec[tid] = per_penalty
+        person_loss_vec = torch.tensor(person_loss_vec, dtype=torch.float32, device=model.device)
+
+    # dev_results_file = '/home/hldai/data/fet/nef-results/wiki-dev-results.txt'
+    dev_results_file = None
+    # test_results_file = '/home/hldai/data/fet/nef-results/bbn-test-results.txt'
+    n_batches = data_queue.get()
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=n_batches, gamma=lr_gamma)
+    losses = list()
+    best_dev_acc = -1
+    logging.info('{} steps, {} steps per iter, lr_decay={}, start training ...'.format(
+        n_iter * n_batches, n_batches, lr_gamma))
+    step = 0
+    while True:
+        batch_data = data_queue.get()
+        if batch_data is None:
+            break
+        response_queue.put('OK')
+        batch_samples, entity_vecs, el_sgns, el_probs = batch_data
+        # use_entity_vecs = step > n_batches
+        use_entity_vecs = True
+        # use_entity_vecs = False
+        # if step == n_batches:
+        #     print('start using entity_vecs')
+
+        model.train()
+
+        if rand_per:
+            (context_token_seqs, mention_token_idxs, mstrs, mstr_token_seqs, type_vecs
+             ) = exputils.get_mstr_context_batch_input_rand_per(
+                model.device, gres.n_types, batch_samples, person_type_id, l2_person_type_ids)
+        else:
+            (context_token_seqs, mention_token_idxs, mstrs, mstr_token_seqs, type_vecs
+             ) = exputils.get_mstr_context_batch_input(model.device, gres.n_types, batch_samples)
+
+        if use_entity_vecs:
+            for i in range(entity_vecs.shape[0]):
+                if np.random.uniform() < nil_rate:
+                    entity_vecs[i] = np.zeros(entity_vecs.shape[1], np.float32)
+                    el_sgns[i] = 0
+            el_sgns = torch.tensor(el_sgns, dtype=torch.float32, device=model.device)
+            el_probs = torch.tensor(el_probs, dtype=torch.float32, device=model.device)
+            entity_vecs = torch.tensor(entity_vecs, dtype=torch.float32, device=model.device)
+        else:
+            entity_vecs = None
+        logits = model(context_token_seqs, mention_token_idxs, mstr_token_seqs, entity_vecs, el_sgns, el_probs)
+        loss = model.get_loss(type_vecs, logits, person_loss_vec=person_loss_vec)
+        scheduler.step()
+        optimizer.zero_grad()
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 10.0, float('inf'))
+        optimizer.step()
+        losses.append(loss.data.cpu().numpy())
+
+        step += 1
+        if step % 1000 == 0:
+            # logging.info('i={} l={:.4f}'.format(step + 1, sum(losses)))
+            l_v, acc_v, pacc_v, _, _, dev_results = eval_nefaaa(
+                gres, model, dev_samples, dev_true_labels_dict, dev_entity_vecs, dev_el_sgns, dev_el_probs,
+                eval_batch_size, use_entity_vecs=use_entity_vecs,
+                single_type_path=single_type_path)
+            _, acc_t, pacc_t, maf1, mif1, test_results = eval_nefaaa(
+                gres, model, test_samples, test_true_labels_dict, test_entity_vecs, test_el_sgns, test_el_probs,
+                eval_batch_size, use_entity_vecs=use_entity_vecs,
+                single_type_path=single_type_path)
+
+            best_tag = '*' if acc_v > best_dev_acc else ''
+            logging.info(
+                'i={} l={:.4f} l_v={:.4f} acc_v={:.4f} paccv={:.4f} acc_t={:.4f} maf1={:.4f} mif1={:.4f}{}'.format(
+                    step, sum(losses), l_v, acc_v, pacc_v, acc_t, maf1, mif1, best_tag))
+            if acc_v > best_dev_acc and save_model_file:
+                torch.save(model.state_dict(), save_model_file)
+                logging.info('model saved to {}'.format(save_model_file))
+
+            if dev_results_file is not None and acc_v > best_dev_acc:
+                datautils.save_json_objs(dev_results, dev_results_file)
+                logging.info('dev reuslts saved {}'.format(dev_results_file))
+            if results_file is not None and acc_v > best_dev_acc:
+                datautils.save_json_objs(test_results, results_file)
+                logging.info('test reuslts saved {}'.format(results_file))
+            # __check_att_vecs(dev_results, gres.n_types)
+
+            if acc_v > best_dev_acc:
+                best_dev_acc = acc_v
+            losses = list()
