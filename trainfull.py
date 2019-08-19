@@ -10,7 +10,7 @@ from el import simpleel
 import config
 
 
-def train_nefaaa():
+def train_model():
     batch_size = 256
     dropout = 0.5
     context_lstm_hidden_dim = 150
@@ -36,7 +36,6 @@ def train_nefaaa():
     dev_data_pkl = data_prefix + '-dev.pkl'
     train_data_pkl = data_prefix + '-train.pkl'
 
-    aaa_model_file = os.path.join(config.MODEL_DIR, 'aaa-token-dhl-{}.pth'.format(dataset))
     use_mlp_tag = '-mlp' if use_mlp else ''
     # save_model_file = os.path.join(
     #     config.MODEL_DIR, 'tanef-{}{}{}-0_7lrd-dhl.pth'.format(use_fs_tag, use_att_tag, use_mlp_tag))
@@ -59,8 +58,8 @@ def train_nefaaa():
         gres.n_types, gres.type_id_dict, el_system, datafiles['wid-type-file'])
 
     logging.info('dataset={}'.format(dataset))
-    fetelexp.train_nefaaa(
-        device, gres, el_entityvec, aaa_model_file, train_data_pkl, dev_data_pkl,
+    fetelexp.train_fetel(
+        device, gres, el_entityvec, train_data_pkl, dev_data_pkl,
         datafiles['nef-test-mentions'], datafiles['nef-test-sents'], noel_preds_file=noel_preds_file,
         type_embed_dim=type_embed_dim, context_lstm_hidden_dim=context_lstm_hidden_dim, learning_rate=lr,
         batch_size=batch_size, n_iter=n_iter, dropout=dropout, rand_per=rand_per,
@@ -80,5 +79,4 @@ if __name__ == '__main__':
 
     device = torch.device('cuda') if torch.cuda.device_count() > 0 else torch.device('cpu')
 
-    train_nefaaa()
-    # eval_nefaaa()
+    train_model()
