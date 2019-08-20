@@ -1,7 +1,14 @@
 import torch
 from torch import nn
+from collections import namedtuple
+from typing import List
+import random
 from utils import utils, datautils
 import config
+
+
+ModelSample = namedtuple('ModelSample', [
+    'mention_id', 'mention_str', 'mstr_token_seq', 'context_token_seq', 'mention_token_idx', 'labels'])
 
 
 class GlobalRes:
@@ -23,6 +30,20 @@ class GlobalRes:
         self.embedding_layer.share_memory()
 
 
+def get_model_sample(mention_id, mention_str, mention_span, sent_tokens, mention_token_id, labels):
+    pos_beg, pos_end = mention_span
+    mstr_tokens = sent_tokens[pos_beg:pos_end]
+    mention_token_idx = pos_beg
+    context_token_seq = sent_tokens[:pos_beg] + [mention_token_id] + sent_tokens[pos_end:]
+
+    if len(context_token_seq) > 256:
+        context_token_seq = context_token_seq[:256]
+    if mention_token_idx >= 256:
+        mention_token_idx = 255
+
+    return ModelSample(mention_id, mention_str, mstr_tokens, context_token_seq, mention_token_idx, labels)
+
+
 def anchor_samples_to_model_samples(samples, mention_token_id, parent_type_ids_dict):
     model_samples = list()
     for i, sample in enumerate(samples):
@@ -32,3 +53,51 @@ def anchor_samples_to_model_samples(samples, mention_token_id, parent_type_ids_d
             mention_id=sample[0], mention_str=mstr, mention_span=[sample[2], sample[3]], sent_tokens=sample[6],
             mention_token_id=mention_token_id, labels=full_labels))
     return model_samples
+
+
+def model_samples_from_json(token_id_dict, unknown_token_id, mention_token_id, type_id_dict,
+                            mentions_file, sents_file):
+    sent_tokens_dict = datautils.read_sents_to_token_id_seq_dict(
+        sents_file, token_id_dict, unknown_token_id)
+
+    samples = list()
+    mentions = datautils.read_json_objs(mentions_file)
+    for m in mentions:
+        # labels = utils.remove_parent_types(m['labels'])
+        labels = m['labels']
+        label_ids = [type_id_dict[t] for t in labels]
+        sample = get_model_sample(
+            m['mention_id'], mention_str=m['str'], mention_span=m['span'],
+            sent_tokens=sent_tokens_dict[m['sent_id']], mention_token_id=mention_token_id, labels=label_ids)
+        samples.append(sample)
+    return samples
+
+
+def get_mstr_context_batch_input(device, n_types, samples: List[ModelSample]):
+    context_token_seqs = [s.context_token_seq for s in samples]
+    mention_token_idxs = [s.mention_token_idx for s in samples]
+    mstrs = [s.mention_str for s in samples]
+    mstr_token_seqs = [s.mstr_token_seq for s in samples]
+    type_vecs = torch.tensor([utils.onehot_encode(s.labels, n_types) for s in samples],
+                             dtype=torch.float32, device=device)
+    return context_token_seqs, mention_token_idxs, mstrs, mstr_token_seqs, type_vecs
+
+
+def get_mstr_context_batch_input_rand_per(device, n_types, samples: List[ModelSample], person_type_id,
+                                          person_l2_type_ids):
+    context_token_seqs = [s.context_token_seq for s in samples]
+    mention_token_idxs = [s.mention_token_idx for s in samples]
+    mstrs = [s.mention_str for s in samples]
+    mstr_token_seqs = [s.mstr_token_seq for s in samples]
+    type_vecs = list()
+    for sample in samples:
+        type_vec = utils.onehot_encode(sample.labels, n_types)
+        if person_type_id is not None and person_type_id in sample.labels:
+            for _ in range(3):
+                rand_person_type_id = person_l2_type_ids[random.randint(0, len(person_l2_type_ids) - 1)]
+                if type_vec[rand_person_type_id] < 1.0:
+                    type_vec[rand_person_type_id] = 1.0
+                    break
+        type_vecs.append(type_vec)
+    type_vecs = torch.tensor(type_vecs, dtype=torch.float32, device=device)
+    return context_token_seqs, mention_token_idxs, mstrs, mstr_token_seqs, type_vecs

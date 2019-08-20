@@ -33,3 +33,39 @@ def load_type_vocab(type_vocab_file):
             type_vocab.append(t)
             type_to_id_dict[t] = i
     return type_vocab, type_to_id_dict
+
+
+def read_sents_to_token_id_seq_dict(sents_file, token_id_dict, unknown_token_id):
+    import json
+
+    sent_tokens_dict = dict()
+    f = open(sents_file, encoding='utf-8')
+    for line in f:
+        sent = json.loads(line)
+        tokens = sent['text'].split(' ')
+        sent_tokens_dict[sent['sent_id']] = [token_id_dict.get(t, unknown_token_id) for t in tokens]
+    f.close()
+    return sent_tokens_dict
+
+
+def read_json_objs(filename):
+    objs = list()
+    with open(filename, encoding='utf-8') as f:
+        for line in f:
+            objs.append(json.loads(line))
+    return objs
+
+
+def save_json_objs(objs, output_file):
+    with open(output_file, 'w', encoding='utf-8', newline='\n') as fout:
+        for v in objs:
+            fout.write('{}\n'.format(json.dumps(v, ensure_ascii=False)))
+
+
+def read_pred_results_file(filename, type_vocab=None):
+    results = read_json_objs(filename)
+    results_dict = dict()
+    for r in results:
+        labels = r['labels'] if type_vocab is None else [type_vocab[l] for l in r['labels']]
+        results_dict[r['mention_id']] = labels
+    return results_dict

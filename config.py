@@ -9,9 +9,9 @@ if platform().startswith('Windows'):
     EL_DATA_DIR = 'd:/data/el'
 else:
     PLATFORM = 'Linux'
-    RES_DIR = '/data/hldai/res'
-    DATA_DIR = '/home/hldai/data/fet'
-    EL_DATA_DIR = '/home/hldai/data/el'
+    RES_DIR = '/data/hldai/fetel/res'
+    DATA_DIR = '/data/hldai/fetel'
+    EL_DATA_DIR = '/data/hldai/fetel/el'
 
 TOKEN_UNK = '<UNK>'
 TOKEN_ZERO_PAD = '<ZPAD>'
@@ -25,12 +25,17 @@ PY_RANDOM_SEED = 9973
 MACHINE_NAME = socket.gethostname()
 MODEL_DIR = join(DATA_DIR, 'models')
 RESULT_DIR = join(DATA_DIR, 'results')
+LOG_DIR = join(DATA_DIR, 'log')
 
 EL_CANDIDATES_DATA_FILE = join(RES_DIR, 'enwiki-20151002-candidate-gen.pkl')
 WIKI_FETEL_WORDVEC_FILE = join(RES_DIR, 'enwiki-20151002-nef-wv-glv840B300d.pkl')
 
 FIGER_FILES = {
     'anchor-train-data-prefix': join(DATA_DIR, 'Wiki/enwiki20151002anchor-fetwiki-0_1'),
+    'type-vocab': join(DATA_DIR, 'Wiki/figer-type-vocab.txt'),
+    'wid-type-file': join(DATA_DIR, 'Wiki/wid-types-figer.txt'),
+    'fetel-test-mentions': join(DATA_DIR, 'Wiki/figer-fetel-test-mentions.json'),
+    'fetel-test-sents': join(DATA_DIR, 'Wiki/figer-fetel-test-sents.json'),
 }
 
 BBN_FILES = {

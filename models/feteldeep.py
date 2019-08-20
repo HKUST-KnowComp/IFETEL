@@ -1,3 +1,33 @@
+import torch
+from torch import nn
+import torch.nn.functional as F
+import numpy as np
+from models import modelutils
+
+
+def inference_labels_full(l1_type_indices, child_type_vecs, scores, extra_label_thres=0.5):
+    label_preds_main = inference_labels(l1_type_indices, child_type_vecs, scores)
+    label_preds = list()
+    for i in range(len(scores)):
+        extra_idxs = np.argwhere(scores[i] > extra_label_thres).squeeze(axis=1)
+        label_preds.append(list(set(label_preds_main[i] + list(extra_idxs))))
+    return label_preds
+
+
+def inference_labels(l1_type_indices, child_type_vecs, scores):
+    l1_type_scores = scores[:, l1_type_indices]
+    tmp_indices = np.argmax(l1_type_scores, axis=1)
+    max_l1_indices = l1_type_indices[tmp_indices]
+    l2_scores = child_type_vecs[max_l1_indices] * scores
+    max_l2_indices = np.argmax(l2_scores, axis=1)
+    # labels_pred = np.zeros(scores.shape[0], np.int32)
+    labels_pred = list()
+    for i, (l1_idx, l2_idx) in enumerate(zip(max_l1_indices, max_l2_indices)):
+        # labels_pred[i] = l2_idx if l2_scores[i][l2_idx] > 1e-4 else l1_idx
+        labels_pred.append([l2_idx] if l2_scores[i][l2_idx] > 1e-4 else [l1_idx])
+    return labels_pred
+
+
 class BaseResModel(nn.Module):
     def __init__(self, device, type_vocab, type_id_dict, embedding_layer: nn.Embedding,
                  context_lstm_hidden_dim, type_embed_dim, dropout=0.5, concat_lstm=False):

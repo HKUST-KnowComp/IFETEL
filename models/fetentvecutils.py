@@ -2,6 +2,11 @@ import numpy as np
 from utils import datautils
 
 
+class FETEntityVec:
+    def get_entity_vecs(self, *input_args):
+        raise NotImplementedError
+
+
 class ELDirectEntityVec:
     def __init__(self, n_types, type_to_id_dict, el_system, wid_types_file):
         self.n_types = n_types
