@@ -5,7 +5,7 @@ import os
 import logging
 from utils.loggingutils import init_universal_logging
 from models import fetentvecutils
-from modelexp import fetelexp, exputils, tanefexp
+from modelexp import fetelexp, exputils
 from el import simpleel
 import config
 
@@ -36,9 +36,6 @@ def train_model():
     dev_data_pkl = data_prefix + '-dev.pkl'
     train_data_pkl = data_prefix + '-train.pkl'
 
-    use_mlp_tag = '-mlp' if use_mlp else ''
-    # save_model_file = os.path.join(
-    #     config.MODEL_DIR, 'tanef-{}{}{}-0_7lrd-dhl.pth'.format(use_fs_tag, use_att_tag, use_mlp_tag))
     save_model_file = None
     results_file = os.path.join(config.DATA_DIR, 'Wiki/fetel-deep-results-{}.txt'.format(dataset))
     noel_preds_file = os.path.join(config.DATA_DIR, 'Wiki/noel-fet-results-aaa-{}.txt'.format(dataset))
@@ -59,7 +56,6 @@ def train_model():
 
     logging.info('dataset={}'.format(dataset))
     fetelexp.train_fetel(
-    # tanefexp.train_nefaaa(
         device, gres, el_entityvec, train_data_pkl, dev_data_pkl,
         datafiles['fetel-test-mentions'], datafiles['fetel-test-sents'], noel_preds_file=noel_preds_file,
         type_embed_dim=type_embed_dim, context_lstm_hidden_dim=context_lstm_hidden_dim, learning_rate=lr,
