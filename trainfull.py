@@ -37,7 +37,8 @@ def train_model():
     train_data_pkl = data_prefix + '-train.pkl'
 
     save_model_file = None
-    results_file = os.path.join(config.DATA_DIR, 'Wiki/fetel-deep-results-{}.txt'.format(dataset))
+    # results_file = os.path.join(config.DATA_DIR, 'Wiki/fetel-deep-results-{}.txt'.format(dataset))
+    results_file = None
     noel_preds_file = os.path.join(config.DATA_DIR, 'Wiki/noel-fet-results-aaa-{}.txt'.format(dataset))
 
     # word_vecs_file = config.AFET_WIKI_FILES['word-vecs-pkl']
