@@ -26,8 +26,10 @@ LOG_DIR = join(DATA_DIR, 'log')
 
 EL_CANDIDATES_DATA_FILE = join(RES_DIR, 'enwiki-20151002-candidate-gen.pkl')
 WIKI_FETEL_WORDVEC_FILE = join(RES_DIR, 'enwiki-20151002-nef-wv-glv840B300d.pkl')
+WIKI_ANCHOR_SENTS_FILE = join(RES_DIR, 'enwiki-20151002-anchor-sents.txt')
 
 FIGER_FILES = {
+    'typed-wiki-mentions': join(DATA_DIR, 'Wiki/enwiki-20151002-anchor-mentions-typed.txt'),
     'anchor-train-data-prefix': join(DATA_DIR, 'Wiki/enwiki20151002anchor-fetwiki-0_1'),
     'type-vocab': join(DATA_DIR, 'Wiki/figer-type-vocab.txt'),
     'wid-type-file': join(DATA_DIR, 'Wiki/wid-types-figer.txt'),

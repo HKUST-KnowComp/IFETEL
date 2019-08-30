@@ -1,5 +1,17 @@
 import pickle
 import json
+import pandas as pd
+
+
+def parse_typed_mention_file_line(line):
+    parts = line.strip().split('\t')
+    wid = int(parts[0])
+    mention_str = parts[1]
+    sent_id = int(parts[2])
+    pos_beg, pos_end = int(parts[3]), int(parts[4])
+    target_wid = int(parts[5])
+    type_ids = [int(t) for t in parts[6].split(' ')]
+    return wid, mention_str, sent_id, pos_beg, pos_end, target_wid, type_ids
 
 
 def load_wid_types_file(filename, type_to_id_dict=None):
@@ -69,3 +81,8 @@ def read_pred_results_file(filename, type_vocab=None):
         labels = r['labels'] if type_vocab is None else [type_vocab[l] for l in r['labels']]
         results_dict[r['mention_id']] = labels
     return results_dict
+
+
+def load_csv(file, na_filter=True):
+    with open(file, encoding='utf-8') as f:
+        return pd.read_csv(f, na_filter=na_filter)
