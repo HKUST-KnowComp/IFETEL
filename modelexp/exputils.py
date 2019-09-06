@@ -27,7 +27,7 @@ class GlobalRes:
         self.embedding_layer = nn.Embedding.from_pretrained(torch.from_numpy(self.token_vecs))
         self.embedding_layer.padding_idx = self.zero_pad_token_id
         self.embedding_layer.weight.requires_grad = False
-        self.embedding_layer.share_memory()
+        # self.embedding_layer.share_memory()
 
 
 def get_model_sample(mention_id, mention_str, mention_span, sent_tokens, mention_token_id, labels):

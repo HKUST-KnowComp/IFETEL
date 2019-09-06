@@ -5,7 +5,7 @@ import os
 import logging
 from utils.loggingutils import init_universal_logging
 from models import fetentvecutils
-from modelexp import fetelexp, exputils
+from modelexp import fetelexpsp, exputils
 from el import simpleel
 import config
 
@@ -23,6 +23,7 @@ def train_model():
     use_mlp = True
     rand_per = True
     stack_lstm = True
+    concat_lstm = False
     per_pen = 2.0
 
     dataset = 'figer'
@@ -39,7 +40,10 @@ def train_model():
     save_model_file = None
     # results_file = os.path.join(config.DATA_DIR, 'Wiki/fetel-deep-results-{}.txt'.format(dataset))
     results_file = None
-    noel_preds_file = os.path.join(config.DATA_DIR, 'Wiki/noel-fet-results-aaa-{}.txt'.format(dataset))
+    if dataset == 'figer':
+        noel_preds_file = os.path.join(config.DATA_DIR, 'Wiki/noel-fet-results-aaa-figer.txt')
+    else:
+        noel_preds_file = os.path.join(config.DATA_DIR, 'BBN/noel-fet-results-aaa-bbn.txt')
 
     # word_vecs_file = config.AFET_WIKI_FILES['word-vecs-pkl']
     # dev_data_pkl = config.AFET_WIKI_FILES['nef-figer-dev-pkl']
@@ -56,14 +60,14 @@ def train_model():
         gres.n_types, gres.type_id_dict, el_system, datafiles['wid-type-file'])
 
     logging.info('dataset={}'.format(dataset))
-    fetelexp.train_fetel(
+    fetelexpsp.train_fetel(
         device, gres, el_entityvec, train_data_pkl, dev_data_pkl,
         datafiles['fetel-test-mentions'], datafiles['fetel-test-sents'], noel_preds_file=noel_preds_file,
         type_embed_dim=type_embed_dim, context_lstm_hidden_dim=context_lstm_hidden_dim, learning_rate=lr,
         batch_size=batch_size, n_iter=n_iter, dropout=dropout, rand_per=rand_per,
         per_penalty=per_pen, use_mlp=use_mlp, pred_mlp_hdim=pred_mlp_hdim, att_mlp_hdim=att_mlp_hdim,
         save_model_file=save_model_file, nil_rate=nil_rate, single_type_path=single_type_path,
-        stack_lstm=stack_lstm, results_file=results_file)
+        stack_lstm=stack_lstm, concat_lstm=concat_lstm, results_file=results_file)
 
 
 if __name__ == '__main__':
