@@ -73,7 +73,7 @@ class BaseResModel(nn.Module):
         # lstm_output1 = self.dropout_layer(lstm_output1)
         lstm_output2, self.context_hidden2 = self.context_lstm2(lstm_output1, self.context_hidden2)
 
-        lstm_output1, _ = torch.nn.utils.rnn.pad_packed_sequence(lstm_output2, batch_first=True)
+        lstm_output1, _ = torch.nn.utils.rnn.pad_packed_sequence(lstm_output1, batch_first=True)
         lstm_output2, _ = torch.nn.utils.rnn.pad_packed_sequence(lstm_output2, batch_first=True)
         if self.concat_lstm:
             lstm_output = torch.cat((lstm_output1, lstm_output2), dim=2)

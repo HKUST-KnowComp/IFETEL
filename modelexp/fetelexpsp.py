@@ -48,11 +48,11 @@ def __get_entity_vecs_for_mentions(el_entityvec: ELDirectEntityVec, mentions, no
 def train_fetel(device, gres: exputils.GlobalRes, el_entityvec: ELDirectEntityVec, train_samples_pkl,
                 dev_samples_pkl, test_mentions_file, test_sents_file, noel_preds_file, type_embed_dim,
                 context_lstm_hidden_dim, learning_rate, batch_size, n_iter, dropout, rand_per, per_penalty,
-                use_mlp=False, pred_mlp_hdim=None, att_mlp_hdim=None, save_model_file=None, nil_rate=0.5,
+                use_mlp=False, pred_mlp_hdim=None, save_model_file=None, nil_rate=0.5,
                 single_type_path=False, stack_lstm=False, concat_lstm=False, results_file=None):
     logging.info(
-        'type_embed_dim={} cxt_lstm_hidden_dim={} pmlp_hdim={} amlp_hdim={} nil_rate={} single_type_path={}'.format(
-            type_embed_dim, context_lstm_hidden_dim, pred_mlp_hdim, att_mlp_hdim, nil_rate, single_type_path))
+        'type_embed_dim={} cxt_lstm_hidden_dim={} pmlp_hdim={} nil_rate={} single_type_path={}'.format(
+            type_embed_dim, context_lstm_hidden_dim, pred_mlp_hdim, nil_rate, single_type_path))
     logging.info('rand_per={} per_pen={}'.format(rand_per, per_penalty))
     logging.info('stack_lstm={} cat_lstm={}'.format(stack_lstm, concat_lstm))
 
