@@ -7,8 +7,16 @@ from utils import utils, datautils
 import config
 
 
-ModelSample = namedtuple('ModelSample', [
-    'mention_id', 'mention_str', 'mstr_token_seq', 'context_token_seq', 'mention_token_idx', 'labels'])
+class ModelSample:
+    def __init__(self, mention_id, mention_str, mstr_token_seq, context_token_seq, mention_token_idx):
+        self.mention_id = mention_id
+        self.mention_str = mention_str
+        self.mstr_token_seq = mstr_token_seq
+        self.context_token_seq = context_token_seq
+        self.mention_token_idx = mention_token_idx
+
+# ModelSample = namedtuple('ModelSample', [
+#     'mention_id', 'mention_str', 'mstr_token_seq', 'context_token_seq', 'mention_token_idx', 'labels'])
 
 
 class GlobalRes:

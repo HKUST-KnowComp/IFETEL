@@ -11,6 +11,14 @@ import logging
 from utils import datautils, utils
 
 
+def __get_l2_person_type_ids(type_vocab):
+    person_type_ids = list()
+    for i, t in enumerate(type_vocab):
+        if t.startswith('/person') and t != '/person':
+            person_type_ids.append(i)
+    return person_type_ids
+
+
 def __get_entity_vecs_for_samples(el_entityvec: ELDirectEntityVec, samples: List[ModelSample], noel_pred_results,
                                   filter_by_pop=False, person_type_id=None, person_l2_type_ids=None, type_vocab=None):
     # return [el_firstsent.get_entity_vec(s.mention_str) for s in samples]
@@ -86,6 +94,7 @@ def train_fetel(device, gres: exputils.GlobalRes, el_entityvec: ELDirectEntityVe
     test_true_labels_dict = {s.mention_id: [gres.type_vocab[l] for l in s.labels] for s in test_samples}
     test_entity_vecs, test_el_sgns, test_el_probs = __get_entity_vecs_for_mentions(
         el_entityvec, mentions, test_noel_pred_results, gres.n_types)
+
     person_type_id = gres.type_id_dict.get('/person')
     l2_person_type_ids = None
     person_loss_vec = None
@@ -147,10 +156,10 @@ def train_fetel(device, gres: exputils.GlobalRes, el_entityvec: ELDirectEntityVe
         if step % 1000 == 0:
             # logging.info('i={} l={:.4f}'.format(step + 1, sum(losses)))
             l_v, acc_v, pacc_v, _, _, dev_results = eval_fetel(
-                gres, model, dev_samples, dev_true_labels_dict, dev_entity_vecs, dev_el_sgns, dev_el_probs,
+                gres, model, dev_samples, dev_true_labels_dict, dev_entity_vecs, dev_el_probs,
                 eval_batch_size, use_entity_vecs=use_entity_vecs, single_type_path=single_type_path)
             _, acc_t, pacc_t, maf1, mif1, test_results = eval_fetel(
-                gres, model, test_samples, test_true_labels_dict, test_entity_vecs, test_el_sgns, test_el_probs,
+                gres, model, test_samples, test_true_labels_dict, test_entity_vecs, test_el_probs,
                 eval_batch_size, use_entity_vecs=use_entity_vecs, single_type_path=single_type_path)
 
             best_tag = '*' if acc_v > best_dev_acc else ''
@@ -173,19 +182,10 @@ def train_fetel(device, gres: exputils.GlobalRes, el_entityvec: ELDirectEntityVe
             losses = list()
 
 
-def __get_l2_person_type_ids(type_vocab):
-    person_type_ids = list()
-    for i, t in enumerate(type_vocab):
-        if t.startswith('/person') and t != '/person':
-            person_type_ids.append(i)
-    return person_type_ids
-
-
 def eval_fetel(gres: exputils.GlobalRes, model, samples: List[ModelSample], true_labels_dict,
-               entity_vecs, el_sgns, el_probs, batch_size=32, use_entity_vecs=True, single_type_path=False):
+               entity_vecs, el_probs, batch_size=32, use_entity_vecs=True, single_type_path=False):
     model.eval()
     n_batches = (len(samples) + batch_size - 1) // batch_size
-    losses = list()
     pred_labels_dict = dict()
     result_objs = list()
     for i in range(n_batches):
@@ -203,8 +203,6 @@ def eval_fetel(gres: exputils.GlobalRes, model, samples: List[ModelSample], true
         with torch.no_grad():
             logits = model(context_token_seqs, mention_token_idxs, mstr_token_seqs,
                            entity_vecs_batch, el_probs_batch)
-            loss = model.get_loss(type_vecs, logits)
-        losses.append(loss)
 
         if single_type_path:
             preds = model.inference(logits)
@@ -223,4 +221,4 @@ def eval_fetel(gres: exputils.GlobalRes, model, samples: List[ModelSample], true
         partial_acc = utils.partial_acc(true_labels_dict, pred_labels_dict)
         maf1 = utils.macrof1(true_labels_dict, pred_labels_dict)
         mif1 = utils.microf1(true_labels_dict, pred_labels_dict)
-    return sum(losses), strict_acc, partial_acc, maf1, mif1, result_objs
+    return strict_acc, partial_acc, maf1, mif1, result_objs
