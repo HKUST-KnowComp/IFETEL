@@ -32,8 +32,7 @@ def train_model():
 
     word_vecs_file = config.WIKI_FETEL_WORDVEC_FILE
 
-    # data_prefix = datafiles['anchor-train-data-prefix']
-    data_prefix = os.path.join(config.DATA_DIR, 'Wiki/enwiki20151002anchor-fetwiki-0_1')
+    data_prefix = datafiles['anchor-train-data-prefix']
     dev_data_pkl = data_prefix + '-dev.pkl'
     train_data_pkl = data_prefix + '-train.pkl'
 
@@ -72,7 +71,6 @@ if __name__ == '__main__':
     torch.random.manual_seed(config.RANDOM_SEED)
     np.random.seed(config.NP_RANDOM_SEED)
     random.seed(config.PY_RANDOM_SEED)
-    # random.seed(7711)
     str_today = datetime.date.today().strftime('%y-%m-%d')
     log_file = os.path.join(config.LOG_DIR, '{}-{}-{}.log'.format(os.path.splitext(
         os.path.basename(__file__))[0], str_today, config.MACHINE_NAME))

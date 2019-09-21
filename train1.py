@@ -5,7 +5,7 @@ import os
 import logging
 from utils.loggingutils import init_universal_logging
 from models import fetentvecutils
-from modelexp import fetelexpsp, exputils
+from modelexp import fetelexp, exputils
 from el import simpleel
 import config
 
@@ -13,9 +13,9 @@ import config
 def train_model():
     batch_size = 256
     dropout = 0.5
-    context_lstm_hidden_dim = 150
+    context_lstm_hidden_dim = 250
     type_embed_dim = 500
-    pred_mlp_hdim = 400
+    pred_mlp_hdim = 500
     n_iter = 15
     lr = 0.001
     nil_rate = 0.5
@@ -25,8 +25,8 @@ def train_model():
     concat_lstm = False
     per_pen = 2.0
 
-    dataset = 'figer'
-    # dataset = 'bbn'
+    # dataset = 'figer'
+    dataset = 'bbn'
     datafiles = config.FIGER_FILES if dataset == 'figer' else config.BBN_FILES
     single_type_path = True if dataset == 'bbn' else False
 
@@ -55,8 +55,8 @@ def train_model():
     el_entityvec = fetentvecutils.ELDirectEntityVec(
         gres.n_types, gres.type_id_dict, el_system, datafiles['wid-type-file'])
 
-    logging.info('dataset={}'.format(dataset))
-    fetelexpsp.train_fetel(
+    logging.info('dataset={} {}'.format(dataset, data_prefix))
+    fetelexp.train_fetel(
         device, gres, el_entityvec, train_data_pkl, dev_data_pkl,
         datafiles['fetel-test-mentions'], datafiles['fetel-test-sents'], noel_preds_file=noel_preds_file,
         type_embed_dim=type_embed_dim, context_lstm_hidden_dim=context_lstm_hidden_dim, learning_rate=lr,

@@ -113,7 +113,6 @@ class FETELStack(BaseResModel):
                  type_embed_dim, dropout=0.5, use_mlp=False, mlp_hidden_dim=None, concat_lstm=False):
         super(FETELStack, self).__init__(device, type_vocab, type_id_dict, embedding_layer,
                                          context_lstm_hidden_dim, type_embed_dim, dropout, concat_lstm)
-        self.linear_att = None
         self.use_mlp = use_mlp
         # self.dropout_layer = nn.Dropout(dropout)
 
@@ -132,7 +131,7 @@ class FETELStack(BaseResModel):
             self.lin2_bn = nn.BatchNorm1d(mlp_hidden_dim)
             self.linear_map3 = nn.Linear(mlp_hidden_dim, type_embed_dim)
 
-    def forward(self, context_token_seqs, mention_token_idxs, mstr_token_seqs, entity_vecs, el_sgns,
+    def forward(self, context_token_seqs, mention_token_idxs, mstr_token_seqs, entity_vecs,
                 el_probs, debug_flg=False):
         batch_size = len(context_token_seqs)
 
@@ -142,16 +141,16 @@ class FETELStack(BaseResModel):
         context_lstm_output = self.get_context_lstm_output(
             context_token_seqs, seq_lens, mention_token_idxs, batch_size)
         context_lstm_output = context_lstm_output[back_idxs]
-
         name_output = modelutils.get_avg_token_vecs(self.device, self.embedding_layer, mstr_token_seqs)
-        # cat_output = torch.cat((context_lstm_output, name_output), dim=1)
 
-        cat_output = torch.cat((context_lstm_output, name_output, entity_vecs, el_probs.view(-1, 1)), dim=1)
+        cat_output = self.dropout_layer(torch.cat((context_lstm_output, name_output, entity_vecs), dim=1))
+        cat_output = torch.cat((cat_output, el_probs.view(-1, 1)), dim=1)
+
         # logits = self.linear_map(F.dropout(cat_output, self.dropout, training))
         if not self.use_mlp:
             mention_reps = self.linear_map(self.dropout_layer(cat_output))
         else:
-            l1_output = self.linear_map1(self.dropout_layer(cat_output))
+            l1_output = self.linear_map1(cat_output)
             # l1_output = F.relu(l1_output)
             l1_output = self.lin1_bn(F.relu(l1_output))
             # mention_reps = self.linear_map2(F.dropout(l1_output, self.dropout, training))
