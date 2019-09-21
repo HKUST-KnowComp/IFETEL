@@ -202,16 +202,16 @@ def eval_fetel(gres: exputils.GlobalRes, model, samples: List[ModelSample], true
         batch_samples = samples[batch_beg:batch_end]
         (context_token_seqs, mention_token_idxs, mstrs, mstr_token_seqs, type_vecs
          ) = exputils.get_mstr_context_batch_input(model.device, gres.n_types, batch_samples)
-        entity_vecs_batch, el_sgns_batch, el_probs_batch = None, None, None
+        entity_vecs_batch, el_probs_batch = None, None
         if use_entity_vecs:
             # entity_vecs, el_sgns = __get_entity_vecs_for_samples(el_entityvec, batch_samples, noel_pred_results)
             entity_vecs_batch = torch.tensor(entity_vecs[batch_beg:batch_end], dtype=torch.float32,
                                              device=model.device)
-            el_sgns_batch = torch.tensor(el_sgns[batch_beg:batch_end], dtype=torch.float32, device=model.device)
+            # el_sgns_batch = torch.tensor(el_sgns[batch_beg:batch_end], dtype=torch.float32, device=model.device)
             el_probs_batch = torch.tensor(el_probs[batch_beg:batch_end], dtype=torch.float32, device=model.device)
         with torch.no_grad():
             logits = model(context_token_seqs, mention_token_idxs, mstr_token_seqs,
-                           entity_vecs_batch, el_sgns_batch, el_probs_batch)
+                           entity_vecs_batch, el_probs_batch)
             loss = model.get_loss(type_vecs, logits)
         losses.append(loss)
 
