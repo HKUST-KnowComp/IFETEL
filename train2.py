@@ -58,7 +58,7 @@ def train_model():
     logging.info('dataset={} {}'.format(dataset, data_prefix))
     fetelexp.train_fetel(
         device, gres, el_entityvec, train_data_pkl, dev_data_pkl,
-        datafiles['fetel-test-mentions'], datafiles['fetel-test-sents'], noel_preds_file=noel_preds_file,
+        datafiles['fetel-test-mentions'], datafiles['fetel-test-sents'], test_noel_preds_file=noel_preds_file,
         type_embed_dim=type_embed_dim, context_lstm_hidden_dim=context_lstm_hidden_dim, learning_rate=lr,
         batch_size=batch_size, n_iter=n_iter, dropout=dropout, rand_per=rand_per,
         per_penalty=per_pen, use_mlp=use_mlp, pred_mlp_hdim=pred_mlp_hdim,

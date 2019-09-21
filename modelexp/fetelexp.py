@@ -46,7 +46,7 @@ def __get_entity_vecs_for_mentions(el_entityvec: ELDirectEntityVec, mentions, no
 
 
 def train_fetel(device, gres: exputils.GlobalRes, el_entityvec: ELDirectEntityVec, train_samples_pkl,
-                dev_samples_pkl, test_mentions_file, test_sents_file, noel_preds_file, type_embed_dim,
+                dev_samples_pkl, test_mentions_file, test_sents_file, test_noel_preds_file, type_embed_dim,
                 context_lstm_hidden_dim, learning_rate, batch_size, n_iter, dropout, rand_per, per_penalty,
                 use_mlp=False, pred_mlp_hdim=None, save_model_file=None, nil_rate=0.5,
                 single_type_path=False, stack_lstm=False, concat_lstm=False, results_file=None):
@@ -72,29 +72,12 @@ def train_fetel(device, gres: exputils.GlobalRes, el_entityvec: ELDirectEntityVe
     dev_samples = datautils.load_pickle_data(dev_samples_pkl)
     dev_samples = anchor_samples_to_model_samples(dev_samples, gres.mention_token_id, gres.parent_type_ids_dict)
 
-    train_proc(gres, model, el_entityvec, train_samples, batch_size, dev_samples, test_mentions_file,
-               test_sents_file, noel_preds_file, nil_rate, learning_rate, n_iter, rand_per,
-               per_penalty=per_penalty, single_type_path=single_type_path, save_model_file=save_model_file,
-               results_file=results_file)
-
-
-def __get_l2_person_type_ids(type_vocab):
-    person_type_ids = list()
-    for i, t in enumerate(type_vocab):
-        if t.startswith('/person') and t != '/person':
-            person_type_ids.append(i)
-    return person_type_ids
-
-
-def train_proc(gres: exputils.GlobalRes, model, el_entityvec: ELDirectEntityVec, train_samples, batch_size,
-               dev_samples: List[ModelSample], test_mentions_file, test_sents_file, test_noel_preds_file, nil_rate,
-               learning_rate, n_iter, rand_per, per_penalty, single_type_path,
-               save_model_file=None, eval_batch_size=32, filter_by_pop=False, results_file=None):
     lr_gamma = 0.7
+    eval_batch_size = 32
     logging.info('{}'.format(model.__class__.__name__))
     dev_true_labels_dict = {s.mention_id: [gres.type_vocab[l] for l in s.labels] for s in dev_samples}
     dev_entity_vecs, dev_el_sgns, dev_el_probs = __get_entity_vecs_for_samples(
-        el_entityvec, dev_samples, None, filter_by_pop)
+        el_entityvec, dev_samples, None)
 
     test_samples = model_samples_from_json(gres.token_id_dict, gres.unknown_token_id, gres.mention_token_id,
                                            gres.type_id_dict, test_mentions_file, test_sents_file)
@@ -102,7 +85,7 @@ def train_proc(gres: exputils.GlobalRes, model, el_entityvec: ELDirectEntityVec,
     mentions = datautils.read_json_objs(test_mentions_file)
     test_true_labels_dict = {s.mention_id: [gres.type_vocab[l] for l in s.labels] for s in test_samples}
     test_entity_vecs, test_el_sgns, test_el_probs = __get_entity_vecs_for_mentions(
-        el_entityvec, mentions, test_noel_pred_results, gres.n_types, filter_by_pop)
+        el_entityvec, mentions, test_noel_pred_results, gres.n_types)
     person_type_id = gres.type_id_dict.get('/person')
     l2_person_type_ids = None
     person_loss_vec = None
@@ -188,6 +171,14 @@ def train_proc(gres: exputils.GlobalRes, model, el_entityvec: ELDirectEntityVec,
             if acc_v > best_dev_acc:
                 best_dev_acc = acc_v
             losses = list()
+
+
+def __get_l2_person_type_ids(type_vocab):
+    person_type_ids = list()
+    for i, t in enumerate(type_vocab):
+        if t.startswith('/person') and t != '/person':
+            person_type_ids.append(i)
+    return person_type_ids
 
 
 def eval_fetel(gres: exputils.GlobalRes, model, samples: List[ModelSample], true_labels_dict,
