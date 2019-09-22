@@ -1,6 +1,7 @@
 import torch
 from torch import nn
-from collections import namedtuple
+# from collections import namedtuple
+import numpy as np
 from typing import List
 import random
 from utils import utils, datautils
@@ -83,9 +84,8 @@ def model_samples_from_json(token_id_dict, unknown_token_id, mention_token_id, t
     samples = list()
     mentions = datautils.read_json_objs(mentions_file)
     for m in mentions:
-        sample = get_model_sample(
-            m['mention_id'], mention_str=m['str'], mention_span=m['span'],
-            sent_tokens=sent_tokens_dict[m['sent_id']], mention_token_id=mention_token_id)
+        sample = get_model_sample(m['mention_id'], mention_str=m['str'], mention_span=m['span'],
+                                  sent_tokens=sent_tokens_dict[m['sent_id']], mention_token_id=mention_token_id)
         samples.append(sample)
     return samples
 
@@ -103,6 +103,13 @@ def get_mstr_cxt_label_batch_input(device, n_types, samples: List[LabeledModelSa
     label_type_vecs = torch.tensor([utils.onehot_encode(s.labels, n_types) for s in samples],
                                    dtype=torch.float32, device=device)
     return (*tmp, label_type_vecs)
+
+
+def get_person_type_loss_vec(l2_person_type_ids, n_types, per_penalty, device):
+    person_loss_vec = np.ones(n_types, np.float32)
+    for tid in l2_person_type_ids:
+        person_loss_vec[tid] = per_penalty
+    return torch.tensor(person_loss_vec, dtype=torch.float32, device=device)
 
 
 def get_mstr_context_batch_input_rand_per(device, n_types, samples: List[LabeledModelSample], person_type_id,

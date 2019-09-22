@@ -25,26 +25,23 @@ def train_model():
     concat_lstm = False
     per_pen = 2.0
 
-    dataset = 'figer'
-    # dataset = 'bbn'
+    # dataset = 'figer'
+    dataset = 'bbn'
     datafiles = config.FIGER_FILES if dataset == 'figer' else config.BBN_FILES
     single_type_path = True if dataset == 'bbn' else False
+    test_mentions_file = datafiles['fetel-test-mentions']
 
     word_vecs_file = config.WIKI_FETEL_WORDVEC_FILE
 
-    # data_prefix = datafiles['anchor-train-data-prefix']
-    data_prefix = os.path.join(config.DATA_DIR, 'Wiki/enwiki20151002anchor-fetwiki-0_1')
+    data_prefix = datafiles['anchor-train-data-prefix']
     dev_data_pkl = data_prefix + '-dev.pkl'
     train_data_pkl = data_prefix + '-train.pkl'
 
     save_model_file = None
-    # results_file = os.path.join(config.DATA_DIR, 'Wiki/fetel-deep-results-{}.txt'.format(dataset))
-    results_file = None
+    # results_file = None
+    results_file = os.path.join(config.DATA_DIR, 'result/{}-{}.txt'.format(
+        os.path.splitext(os.path.basename(test_mentions_file))[0], dataset))
     noel_preds_file = datafiles['noel-typing-results']
-
-    # word_vecs_file = config.AFET_WIKI_FILES['word-vecs-pkl']
-    # dev_data_pkl = config.AFET_WIKI_FILES['nef-figer-dev-pkl']
-    # train_data_pkl = config.AFET_WIKI_FILES['nef-figer-train-pkl']
 
     el_candidates_file = config.EL_CANDIDATES_DATA_FILE
     print('init el with {} ...'.format(el_candidates_file), end=' ', flush=True)
@@ -58,11 +55,10 @@ def train_model():
 
     logging.info('dataset={} {}'.format(dataset, data_prefix))
     fetelexp.train_fetel(
-        device, gres, el_entityvec, train_data_pkl, dev_data_pkl,
-        datafiles['fetel-test-mentions'], datafiles['fetel-test-sents'], noel_preds_file=noel_preds_file,
-        type_embed_dim=type_embed_dim, context_lstm_hidden_dim=context_lstm_hidden_dim, learning_rate=lr,
-        batch_size=batch_size, n_iter=n_iter, dropout=dropout, rand_per=rand_per,
-        per_penalty=per_pen, use_mlp=use_mlp, pred_mlp_hdim=pred_mlp_hdim,
+        device, gres, el_entityvec, train_data_pkl, dev_data_pkl, test_mentions_file, datafiles['fetel-test-sents'],
+        test_noel_preds_file=noel_preds_file, type_embed_dim=type_embed_dim,
+        context_lstm_hidden_dim=context_lstm_hidden_dim, learning_rate=lr, batch_size=batch_size, n_iter=n_iter,
+        dropout=dropout, rand_per=rand_per, per_penalty=per_pen, use_mlp=use_mlp, pred_mlp_hdim=pred_mlp_hdim,
         save_model_file=save_model_file, nil_rate=nil_rate, single_type_path=single_type_path,
         stack_lstm=stack_lstm, concat_lstm=concat_lstm, results_file=results_file)
 
@@ -72,7 +68,6 @@ if __name__ == '__main__':
     torch.random.manual_seed(config.RANDOM_SEED)
     np.random.seed(config.NP_RANDOM_SEED)
     random.seed(config.PY_RANDOM_SEED)
-    # random.seed(7711)
     str_today = datetime.date.today().strftime('%y-%m-%d')
     log_file = os.path.join(config.LOG_DIR, '{}-{}-{}.log'.format(os.path.splitext(
         os.path.basename(__file__))[0], str_today, config.MACHINE_NAME))
