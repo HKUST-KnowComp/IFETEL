@@ -1,5 +1,4 @@
 import torch
-from torch import nn
 import numpy as np
 import time
 from typing import List
@@ -84,16 +83,16 @@ def train_fetel(device, gres: exputils.GlobalRes, el_entityvec: ELDirectEntityVe
     eval_batch_size = 32
     logging.info('{}'.format(model.__class__.__name__))
     dev_true_labels_dict = {s.mention_id: [gres.type_vocab[l] for l in s.labels] for s in dev_samples}
-    dev_entity_vecs, dev_el_sgns, dev_el_probs = __get_entity_vecs_for_samples(
-        el_entityvec, dev_samples, None)
+    dev_entity_vecs, dev_el_sgns, dev_el_probs = __get_entity_vecs_for_samples(el_entityvec, dev_samples, None)
 
     test_samples = model_samples_from_json(gres.token_id_dict, gres.unknown_token_id, gres.mention_token_id,
                                            gres.type_id_dict, test_mentions_file, test_sents_file)
     test_noel_pred_results = datautils.read_pred_results_file(test_noel_preds_file)
-    mentions = datautils.read_json_objs(test_mentions_file)
-    test_true_labels_dict = {s.mention_id: [gres.type_vocab[l] for l in s.labels] for s in test_samples}
+    test_mentions = datautils.read_json_objs(test_mentions_file)
+    # test_true_labels_dict = {s.mention_id: [gres.type_vocab[l] for l in s.labels] for s in test_samples}
+    test_true_labels_dict = {m['mention_id']: m['labels'] for m in test_mentions}
     test_entity_vecs, test_el_sgns, test_el_probs = __get_entity_vecs_for_mentions(
-        el_entityvec, mentions, test_noel_pred_results, gres.n_types)
+        el_entityvec, test_mentions, test_noel_pred_results, gres.n_types)
 
     person_type_id = gres.type_id_dict.get('/person')
     l2_person_type_ids = None
@@ -133,7 +132,7 @@ def train_fetel(device, gres: exputils.GlobalRes, el_entityvec: ELDirectEntityVe
         model.train()
 
         (context_token_seqs, mention_token_idxs, mstrs, mstr_token_seqs, type_vecs
-         ) = exputils.get_mstr_context_batch_input(model.device, gres.n_types, batch_samples)
+         ) = exputils.get_mstr_cxt_label_batch_input(model.device, gres.n_types, batch_samples)
 
         if use_entity_vecs:
             for i in range(entity_vecs.shape[0]):
@@ -155,10 +154,10 @@ def train_fetel(device, gres: exputils.GlobalRes, el_entityvec: ELDirectEntityVe
         step += 1
         if step % 1000 == 0:
             # logging.info('i={} l={:.4f}'.format(step + 1, sum(losses)))
-            l_v, acc_v, pacc_v, _, _, dev_results = eval_fetel(
+            acc_v, pacc_v, _, _, dev_results = eval_fetel(
                 gres, model, dev_samples, dev_true_labels_dict, dev_entity_vecs, dev_el_probs,
                 eval_batch_size, use_entity_vecs=use_entity_vecs, single_type_path=single_type_path)
-            _, acc_t, pacc_t, maf1, mif1, test_results = eval_fetel(
+            acc_t, pacc_t, maf1, mif1, test_results = eval_fetel(
                 gres, model, test_samples, test_true_labels_dict, test_entity_vecs, test_el_probs,
                 eval_batch_size, use_entity_vecs=use_entity_vecs, single_type_path=single_type_path)
 
@@ -191,8 +190,8 @@ def eval_fetel(gres: exputils.GlobalRes, model, samples: List[ModelSample], true
     for i in range(n_batches):
         batch_beg, batch_end = i * batch_size, min((i + 1) * batch_size, len(samples))
         batch_samples = samples[batch_beg:batch_end]
-        (context_token_seqs, mention_token_idxs, mstrs, mstr_token_seqs, type_vecs
-         ) = exputils.get_mstr_context_batch_input(model.device, gres.n_types, batch_samples)
+        (context_token_seqs, mention_token_idxs, mstrs, mstr_token_seqs
+         ) = exputils.get_mstr_cxt_batch_input(batch_samples)
         entity_vecs_batch, el_probs_batch = None, None
         if use_entity_vecs:
             # entity_vecs, el_sgns = __get_entity_vecs_for_samples(el_entityvec, batch_samples, noel_pred_results)

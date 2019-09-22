@@ -15,6 +15,12 @@ class ModelSample:
         self.context_token_seq = context_token_seq
         self.mention_token_idx = mention_token_idx
 
+
+class LabeledModelSample(ModelSample):
+    def __init__(self, mention_id, mention_str, mstr_token_seq, context_token_seq, mention_token_idx, labels):
+        super().__init__(mention_id, mention_str, mstr_token_seq, context_token_seq, mention_token_idx)
+        self.labels = labels
+
 # ModelSample = namedtuple('ModelSample', [
 #     'mention_id', 'mention_str', 'mstr_token_seq', 'context_token_seq', 'mention_token_idx', 'labels'])
 
@@ -38,7 +44,7 @@ class GlobalRes:
         # self.embedding_layer.share_memory()
 
 
-def get_model_sample(mention_id, mention_str, mention_span, sent_tokens, mention_token_id, labels):
+def get_model_sample(mention_id, mention_str, mention_span, sent_tokens, mention_token_id):
     pos_beg, pos_end = mention_span
     mstr_tokens = sent_tokens[pos_beg:pos_end]
     mention_token_idx = pos_beg
@@ -49,7 +55,13 @@ def get_model_sample(mention_id, mention_str, mention_span, sent_tokens, mention
     if mention_token_idx >= 256:
         mention_token_idx = 255
 
-    return ModelSample(mention_id, mention_str, mstr_tokens, context_token_seq, mention_token_idx, labels)
+    return ModelSample(mention_id, mention_str, mstr_tokens, context_token_seq, mention_token_idx)
+
+
+def get_labeled_model_sample(mention_id, mention_str, mention_span, sent_tokens, mention_token_id, labels):
+    s = get_model_sample(mention_id, mention_str, mention_span, sent_tokens, mention_token_id)
+    return LabeledModelSample(s.mention_id, s.mention_str, s.mstr_token_seq, s.context_token_seq, s.mention_token_idx,
+                              labels)
 
 
 def anchor_samples_to_model_samples(samples, mention_token_id, parent_type_ids_dict):
@@ -57,7 +69,7 @@ def anchor_samples_to_model_samples(samples, mention_token_id, parent_type_ids_d
     for i, sample in enumerate(samples):
         mstr = sample[1]
         full_labels = utils.get_full_type_ids(sample[5], parent_type_ids_dict)
-        model_samples.append(get_model_sample(
+        model_samples.append(get_labeled_model_sample(
             mention_id=sample[0], mention_str=mstr, mention_span=[sample[2], sample[3]], sent_tokens=sample[6],
             mention_token_id=mention_token_id, labels=full_labels))
     return model_samples
@@ -71,27 +83,29 @@ def model_samples_from_json(token_id_dict, unknown_token_id, mention_token_id, t
     samples = list()
     mentions = datautils.read_json_objs(mentions_file)
     for m in mentions:
-        # labels = utils.remove_parent_types(m['labels'])
-        labels = m['labels']
-        label_ids = [type_id_dict[t] for t in labels]
         sample = get_model_sample(
             m['mention_id'], mention_str=m['str'], mention_span=m['span'],
-            sent_tokens=sent_tokens_dict[m['sent_id']], mention_token_id=mention_token_id, labels=label_ids)
+            sent_tokens=sent_tokens_dict[m['sent_id']], mention_token_id=mention_token_id)
         samples.append(sample)
     return samples
 
 
-def get_mstr_context_batch_input(device, n_types, samples: List[ModelSample]):
+def get_mstr_cxt_batch_input(samples: List[ModelSample]):
     context_token_seqs = [s.context_token_seq for s in samples]
     mention_token_idxs = [s.mention_token_idx for s in samples]
     mstrs = [s.mention_str for s in samples]
     mstr_token_seqs = [s.mstr_token_seq for s in samples]
-    type_vecs = torch.tensor([utils.onehot_encode(s.labels, n_types) for s in samples],
-                             dtype=torch.float32, device=device)
-    return context_token_seqs, mention_token_idxs, mstrs, mstr_token_seqs, type_vecs
+    return context_token_seqs, mention_token_idxs, mstrs, mstr_token_seqs
 
 
-def get_mstr_context_batch_input_rand_per(device, n_types, samples: List[ModelSample], person_type_id,
+def get_mstr_cxt_label_batch_input(device, n_types, samples: List[LabeledModelSample]):
+    tmp = get_mstr_cxt_batch_input(samples)
+    label_type_vecs = torch.tensor([utils.onehot_encode(s.labels, n_types) for s in samples],
+                                   dtype=torch.float32, device=device)
+    return (*tmp, label_type_vecs)
+
+
+def get_mstr_context_batch_input_rand_per(device, n_types, samples: List[LabeledModelSample], person_type_id,
                                           person_l2_type_ids):
     context_token_seqs = [s.context_token_seq for s in samples]
     mention_token_idxs = [s.mention_token_idx for s in samples]
