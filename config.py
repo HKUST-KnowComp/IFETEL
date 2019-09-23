@@ -33,7 +33,7 @@ FIGER_FILES = {
     'anchor-train-data-prefix': join(DATA_DIR, 'Wiki/enwiki20151002anchor-fetwiki-0_1'),
     'type-vocab': join(DATA_DIR, 'Wiki/figer-type-vocab.txt'),
     'wid-type-file': join(DATA_DIR, 'Wiki/wid-types-figer.txt'),
-    'fetel-test-mentions': join(DATA_DIR, 'Wiki/figer-fetel-test-mentions.json'),
+    'fetel-test-mentions': join(DATA_DIR, 'Wiki/figer-fetel-test-mentions-nl.json'),
     'fetel-test-sents': join(DATA_DIR, 'Wiki/figer-fetel-test-sents.json'),
     'noel-typing-results': join(DATA_DIR, 'Wiki/noel-fet-results-aaa-figer.txt')
 }
