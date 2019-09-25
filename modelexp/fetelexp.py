@@ -126,7 +126,7 @@ def train_fetel(device, gres: exputils.GlobalRes, el_entityvec: ELDirectEntityVe
         use_entity_vecs = True
         model.train()
 
-        (context_token_seqs, mention_token_idxs, mstrs, mstr_token_seqs, type_vecs
+        (context_token_seqs, mention_token_idxs, mstrs, mstr_token_seqs, y_true
          ) = exputils.get_mstr_cxt_label_batch_input(model.device, gres.n_types, batch_samples)
 
         if use_entity_vecs:
@@ -138,7 +138,7 @@ def train_fetel(device, gres: exputils.GlobalRes, el_entityvec: ELDirectEntityVe
         else:
             entity_vecs = None
         logits = model(context_token_seqs, mention_token_idxs, mstr_token_seqs, entity_vecs, el_probs)
-        loss = model.get_loss(type_vecs, logits, person_loss_vec=person_loss_vec)
+        loss = model.get_loss(y_true, logits, person_loss_vec=person_loss_vec)
         scheduler.step()
         optimizer.zero_grad()
         loss.backward()

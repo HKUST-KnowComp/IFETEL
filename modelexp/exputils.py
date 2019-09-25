@@ -100,9 +100,9 @@ def get_mstr_cxt_batch_input(samples: List[ModelSample]):
 
 def get_mstr_cxt_label_batch_input(device, n_types, samples: List[LabeledModelSample]):
     tmp = get_mstr_cxt_batch_input(samples)
-    label_type_vecs = torch.tensor([utils.onehot_encode(s.labels, n_types) for s in samples],
-                                   dtype=torch.float32, device=device)
-    return (*tmp, label_type_vecs)
+    y_true = torch.tensor([utils.onehot_encode(s.labels, n_types) for s in samples],
+                          dtype=torch.float32, device=device)
+    return (*tmp, y_true)
 
 
 def get_person_type_loss_vec(l2_person_type_ids, n_types, per_penalty, device):
