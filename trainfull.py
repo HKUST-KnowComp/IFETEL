@@ -25,8 +25,8 @@ def train_model():
     concat_lstm = False
     per_pen = 2.0
 
-    # dataset = 'figer'
-    dataset = 'bbn'
+    dataset = 'figer'
+    # dataset = 'bbn'
     datafiles = config.FIGER_FILES if dataset == 'figer' else config.BBN_FILES
     single_type_path = True if dataset == 'bbn' else False
     test_mentions_file = datafiles['fetel-test-mentions']
@@ -38,9 +38,9 @@ def train_model():
     train_data_pkl = data_prefix + '-train.pkl'
 
     save_model_file = None
-    # results_file = None
-    results_file = os.path.join(config.DATA_DIR, 'result/{}-{}.txt'.format(
-        os.path.splitext(os.path.basename(test_mentions_file))[0], dataset))
+    results_file = None
+    # results_file = os.path.join(config.DATA_DIR, 'result/{}-{}.txt'.format(
+    #     os.path.splitext(os.path.basename(test_mentions_file))[0], dataset))
     noel_preds_file = datafiles['noel-typing-results']
 
     el_candidates_file = config.EL_CANDIDATES_DATA_FILE
